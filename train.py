@@ -21,7 +21,7 @@ from yolov3.yolov4 import Create_Yolo, compute_loss
 from yolov3.utils import load_yolo_weights
 from yolov3.configs import *
 from evaluate_mAP import get_mAP
-    
+
 if YOLO_TYPE == "yolov4":
     Darknet_weights = YOLO_V4_TINY_WEIGHTS if TRAIN_YOLO_TINY else YOLO_V4_WEIGHTS
 if YOLO_TYPE == "yolov3":
@@ -30,9 +30,14 @@ if TRAIN_YOLO_TINY: TRAIN_MODEL_NAME += "_Tiny"
 
 def main():
     global TRAIN_FROM_CHECKPOINT
-    
+
+    saver = tf.train.Saver()
+    sess = tf.Session()
+    sess.run(tf.global_variables_initializer())
+    saver_def = saver.as_saver_def()
+
     gpus = tf.config.experimental.list_physical_devices('GPU')
-    print(f'GPUs {gpus}')
+    # print(f'GPUs {gpus}')
     if len(gpus) > 0:
         try: tf.config.experimental.set_memory_growth(gpus[0], True)
         except RuntimeError: pass
@@ -68,7 +73,7 @@ def main():
                     yolo.layers[i].set_weights(layer_weights)
                 except:
                     print("skipping", yolo.layers[i].name)
-    
+
     optimizer = tf.keras.optimizers.Adam()
 
 
@@ -109,7 +114,7 @@ def main():
                 tf.summary.scalar("loss/conf_loss", conf_loss, step=global_steps)
                 tf.summary.scalar("loss/prob_loss", prob_loss, step=global_steps)
             writer.flush()
-            
+
         return global_steps.numpy(), optimizer.lr.numpy(), giou_loss.numpy(), conf_loss.numpy(), prob_loss.numpy(), total_loss.numpy()
 
     validate_writer = tf.summary.create_file_writer(TRAIN_LOGDIR)
@@ -128,7 +133,7 @@ def main():
                 prob_loss += loss_items[2]
 
             total_loss = giou_loss + conf_loss + prob_loss
-            
+
         return giou_loss.numpy(), conf_loss.numpy(), prob_loss.numpy(), total_loss.numpy()
 
     mAP_model = Create_Yolo(input_size=YOLO_INPUT_SIZE, CLASSES=TRAIN_CLASSES) # create second model to measure mAP
@@ -145,7 +150,7 @@ def main():
             print("configure TEST options to validate model")
             yolo.save_weights(os.path.join(TRAIN_CHECKPOINTS_FOLDER, TRAIN_MODEL_NAME))
             continue
-        
+
         count, giou_val, conf_val, prob_val, total_val = 0., 0, 0, 0, 0
         for image_data, target in testset:
             results = validate_step(image_data, target)
@@ -161,20 +166,31 @@ def main():
             tf.summary.scalar("validate_loss/conf_val", conf_val/count, step=epoch)
             tf.summary.scalar("validate_loss/prob_val", prob_val/count, step=epoch)
         validate_writer.flush()
-            
+
         print("\n\ngiou_val_loss:{:7.2f}, conf_val_loss:{:7.2f}, prob_val_loss:{:7.2f}, total_val_loss:{:7.2f}\n\n".
               format(giou_val/count, conf_val/count, prob_val/count, total_val/count))
 
+        print(saver_def.filename_tensor_name)
+        print(saver_def.restore_op_name)
         if TRAIN_SAVE_CHECKPOINT and not TRAIN_SAVE_BEST_ONLY:
             save_directory = os.path.join(TRAIN_CHECKPOINTS_FOLDER, TRAIN_MODEL_NAME+"_val_loss_{:7.2f}".format(total_val/count))
             yolo.save_weights(save_directory)
+            saver.save(sess, 'trained_model.sd')
+            tf.train.write_graph(sess.graph_def, '.', 'trained_model.proto', as_text=False)
+            tf.train.write_graph(sess.graph_def, '.', 'trained_model.txt', as_text=True)
         if TRAIN_SAVE_BEST_ONLY and best_val_loss>total_val/count:
             save_directory = os.path.join(TRAIN_CHECKPOINTS_FOLDER, TRAIN_MODEL_NAME)
             yolo.save_weights(save_directory)
             best_val_loss = total_val/count
+            saver.save(sess, 'trained_model.sd')
+            tf.train.write_graph(sess.graph_def, '.', 'trained_model.proto', as_text=False)
+            tf.train.write_graph(sess.graph_def, '.', 'trained_model.txt', as_text=True)
         if not TRAIN_SAVE_BEST_ONLY and not TRAIN_SAVE_CHECKPOINT:
             save_directory = os.path.join(TRAIN_CHECKPOINTS_FOLDER, TRAIN_MODEL_NAME)
             yolo.save_weights(save_directory)
+            saver.save(sess, 'trained_model.sd')
+            tf.train.write_graph(sess.graph_def, '.', 'trained_model.proto', as_text=False)
+            tf.train.write_graph(sess.graph_def, '.', 'trained_model.txt', as_text=True)
 
     # measure mAP of trained custom model
     mAP_model.load_weights(save_directory) # use keras weights
