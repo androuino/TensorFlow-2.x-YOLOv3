@@ -36,7 +36,7 @@ if YOLO_TYPE                == "yolov3":
 # Train options
 TRAIN_YOLO_TINY             = False
 TRAIN_SAVE_BEST_ONLY        = True # saves only best model according validation loss (True recommended)
-TRAIN_SAVE_CHECKPOINT       = True # saves all best validated checkpoints in training process (may require a lot disk space) (False recommended)
+TRAIN_SAVE_CHECKPOINT       = False # saves all best validated checkpoints in training process (may require a lot disk space) (False recommended)
 TRAIN_CLASSES               = "model_data/names.txt"
 TRAIN_ANNOT_PATH            = "model_data/train.txt"
 TRAIN_LOGDIR                = "log"
@@ -47,7 +47,7 @@ TRAIN_BATCH_SIZE            = 2 # 4
 TRAIN_INPUT_SIZE            = 416
 TRAIN_DATA_AUG              = True
 TRAIN_TRANSFER              = False # True, False if we want to train from scratch
-TRAIN_FROM_CHECKPOINT       = "checkpoints/yolov3_custom" # False
+TRAIN_FROM_CHECKPOINT       = False # "checkpoints/yolov3_custom"
 TRAIN_LR_INIT               = 1e-4
 TRAIN_LR_END                = 1e-6
 TRAIN_WARMUP_EPOCHS         = 2

@@ -31,11 +31,6 @@ if TRAIN_YOLO_TINY: TRAIN_MODEL_NAME += "_Tiny"
 def main():
     global TRAIN_FROM_CHECKPOINT
 
-    saver = tf.train.Saver()
-    sess = tf.Session()
-    sess.run(tf.global_variables_initializer())
-    saver_def = saver.as_saver_def()
-
     gpus = tf.config.experimental.list_physical_devices('GPU')
     # print(f'GPUs {gpus}')
     if len(gpus) > 0:
@@ -170,27 +165,16 @@ def main():
         print("\n\ngiou_val_loss:{:7.2f}, conf_val_loss:{:7.2f}, prob_val_loss:{:7.2f}, total_val_loss:{:7.2f}\n\n".
               format(giou_val/count, conf_val/count, prob_val/count, total_val/count))
 
-        print(saver_def.filename_tensor_name)
-        print(saver_def.restore_op_name)
         if TRAIN_SAVE_CHECKPOINT and not TRAIN_SAVE_BEST_ONLY:
             save_directory = os.path.join(TRAIN_CHECKPOINTS_FOLDER, TRAIN_MODEL_NAME+"_val_loss_{:7.2f}".format(total_val/count))
             yolo.save_weights(save_directory)
-            saver.save(sess, 'trained_model.sd')
-            tf.train.write_graph(sess.graph_def, '.', 'trained_model.proto', as_text=False)
-            tf.train.write_graph(sess.graph_def, '.', 'trained_model.txt', as_text=True)
         if TRAIN_SAVE_BEST_ONLY and best_val_loss>total_val/count:
             save_directory = os.path.join(TRAIN_CHECKPOINTS_FOLDER, TRAIN_MODEL_NAME)
             yolo.save_weights(save_directory)
             best_val_loss = total_val/count
-            saver.save(sess, 'trained_model.sd')
-            tf.train.write_graph(sess.graph_def, '.', 'trained_model.proto', as_text=False)
-            tf.train.write_graph(sess.graph_def, '.', 'trained_model.txt', as_text=True)
         if not TRAIN_SAVE_BEST_ONLY and not TRAIN_SAVE_CHECKPOINT:
             save_directory = os.path.join(TRAIN_CHECKPOINTS_FOLDER, TRAIN_MODEL_NAME)
             yolo.save_weights(save_directory)
-            saver.save(sess, 'trained_model.sd')
-            tf.train.write_graph(sess.graph_def, '.', 'trained_model.proto', as_text=False)
-            tf.train.write_graph(sess.graph_def, '.', 'trained_model.txt', as_text=True)
 
     # measure mAP of trained custom model
     mAP_model.load_weights(save_directory) # use keras weights

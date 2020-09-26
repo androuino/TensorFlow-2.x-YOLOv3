@@ -1,0 +1,6 @@
+checkpoints/
+license-plate-dataset/
+questions_dataset
+model_data/
+log/
+mAP/
